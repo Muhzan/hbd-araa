@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Surprise untuk Araa 🎀</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg1: #ffeaf0;
+      --bg2: #ffd6e8;
+      --accent: #ff6fa8;
+      --muted: #6b3353;
+    }
+    *{box-sizing:border-box}
+    html,body{
+      height:100%;
+      margin:0;
+      font-family: 'Poppins', sans-serif;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+
+    body{
+      background: linear-gradient(160deg, var(--bg1) 0%, var(--bg2) 100%);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:32px;
+      color:var(--muted);
+      overflow:hidden;
+    }
+
+    .card{
+      width:100%;
+      max-width:960px;
+      background: rgba(255,255,255,0.85);
+      border-radius:18px;
+      box-shadow: 0 10px 30px rgba(107,51,83,0.12);
+      padding:36px;
+      position:relative;
+      overflow:visible;
+      text-align:center;
+    }
+
+    .title{
+      font-size:2.2rem;
+      font-weight:600;
+      margin:0 0 6px 0;
+      color:var(--accent);
+      letter-spacing:0.3px;
+    }
+
+    .subtitle{
+      margin:0 0 18px 0;
+      font-size:1rem;
+      font-weight:300;
+    }
+
+    .message{
+      min-height:120px;
+      font-size:1.05rem;
+      line-height:1.6;
+      margin:16px auto 8px;
+      max-width:760px;
+      color:#5a2f48;
+      white-space:pre-wrap;
+      text-align:left;
+      padding:12px 18px;
+      border-radius:12px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,240,247,0.6));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.5);
+    }
+
+    .controls{
+      margin-top:18px;
+      display:flex;
+      gap:12px;
+      justify-content:center;
+      flex-wrap:wrap;
+    }
+
+    .btn{
+      background:var(--accent);
+      color:#fff;
+      border:none;
+      padding:12px 20px;
+      border-radius:999px;
+      font-weight:600;
+      cursor:pointer;
+      box-shadow: 0 6px 18px rgba(255,111,168,0.18);
+      transition: transform .15s ease, box-shadow .15s;
+    }
+    .btn.secondary{
+      background:transparent;
+      color:var(--accent);
+      border:1.5px solid rgba(255,111,168,0.2);
+      box-shadow:none;
+    }
+    .btn:active{ transform: translateY(2px); }
+
+    /* small footer */
+    .footer{
+      margin-top:20px;
+      font-size:0.85rem;
+      color:#7e5266;
+    }
+
+    /* Floating emoji (hearts & balloons) */
+    .float-emoji{
+      position:fixed;
+      pointer-events:none;
+      user-select:none;
+      z-index:40;
+      will-change: transform, opacity;
+    }
+
+    @keyframes rise {
+      0% { transform: translateY(0) scale(1); opacity:1; }
+      100% { transform: translateY(-130vh) scale(0.95); opacity:0; }
+    }
+
+    /* subtle confetti when message ends */
+    .confetti-piece{
+      position:fixed;
+      width:8px; height:12px;
+      background:var(--accent);
+      opacity:0.95;
+      z-index:41;
+      pointer-events:none;
+      transform-origin:center;
+    }
+
+    /* responsive tweaks */
+    @media (max-width:600px){
+      .title{ font-size:1.6rem; }
+      .message{ font-size:0.98rem; }
+      .card{ padding:20px; border-radius:14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card" role="main" aria-live="polite">
+    <div style="display:flex;align-items:center;gap:14px;justify-content:center;flex-direction:column;">
+      <h1 class="title">Happy Birthday, Araa 🎂</h1>
+      <p class="subtitle">Untukmu — yang membuat hari-hariku lebih bermakna</p>
+    </div>
+
+    <div id="message" class="message" aria-atomic="true"></div>
+
+    <div class="controls">
+      <button id="startBtn" class="btn">Mulai Surprise 💝</button>
+      <button id="replayBtn" class="btn secondary" style="display:none">Putar Lagi</button>
+    </div>
+
+    <p class="footer">Tekan "Mulai Surprise" untuk memulai musik dan animasi.</p>
+  </div>
+
+  <!-- background audio (keamanan browser: memainkan setelah interaksi) -->
+  <audio id="bgAudio" loop preload="auto">
+    <!-- Jika ingin ganti musik, gantikan src di bawah -->
+    <source src="https://crowded-amethyst-2yrs3dzj76.edgeone.app/happy-birthday-on-piano-121400.mp3" type="audio/mpeg">
+  </audio>
+
+  <script>
+    // ---- teks ucapan (yang sudah kamu setujui) ----
+    const lines = [
+`Selamat ulang tahun, Araa.
+Terima kasih sudah hadir dan membuat hari-hariku lebih bermakna.
+Aku harap tahun ini membawa banyak hal baik untukmu — tawa, ketenangan, dan semua impian yang kamu kejar.
+Tetap jadi kamu yang hangat dan berani, ya.`,
+
+`(Semua kata ini kuucapkan dari hati. Aku sayang kamu.) 💌`
+    ];
+
+    const messageEl = document.getElementById('message');
+    const startBtn = document.getElementById('startBtn');
+    const replayBtn = document.getElementById('replayBtn');
+    const audio = document.getElementById('bgAudio');
+
+    let typingSpeed = 28; // ms per karakter
+    let linePause = 800;  // ms between lines
+
+    // Typing effect
+    async function typeLines() {
+      messageEl.textContent = '';
+      for (let i=0;i<lines.length;i++){
+        await typeText(lines[i]);
+        if (i < lines.length - 1) {
+          await wait(linePause);
+          // add a small gap line
+          messageEl.textContent += '\n\n';
+        }
+      }
+      // after typing completes -> small celebration
+      launchFinalEffects();
+    }
+
+    function typeText(text){
+      return new Promise(resolve => {
+        let idx = 0;
+        const interval = setInterval(() => {
+          messageEl.textContent += text[idx] ?? '';
+          idx++;
+          // scroll if overflow
+          messageEl.scrollTop = messageEl.scrollHeight;
+          if (idx >= text.length){
+            clearInterval(interval);
+            resolve();
+          }
+        }, typingSpeed);
+      });
+    }
+
+    function wait(ms){ return new Promise(r=>setTimeout(r, ms)); }
+
+    // Floating emoji spawner (hearts & balloons)
+    function spawnEmoji(opts){
+      const el = document.createElement('div');
+      el.className = 'float-emoji';
+      el.style.left = (opts.left ?? (Math.random()*80+10)) + 'vw';
+      el.style.bottom = (opts.bottom ?? '-6vh');
+      el.style.fontSize = (opts.size ?? (Math.random()*28+18)) + 'px';
+      el.style.opacity = opts.opacity ?? 1;
+      el.innerHTML = opts.char ?? '💗';
+      el.style.animation = `rise ${opts.duration || (Math.random()*6+6)}s linear forwards`;
+      el.style.transition = 'transform .2s';
+      document.body.appendChild(el);
+      // remove after animation
+      setTimeout(()=> el.remove(), (opts.removeAfter || 11000));
+    }
+
+    // spawn multiple periodically
+    let spawnInterval;
+    function startSpawning(){
+      // initial burst
+      for(let i=0;i<8;i++){
+        setTimeout(()=> spawnEmoji({char: i%2? '🎈':'💖', size: Math.random()*26+18, left: Math.random()*90+5, duration: Math.random()*6+7}), i*220);
+      }
+      // ongoing spawn
+      spawnInterval = setInterval(() => {
+        const kind = Math.random() < 0.6 ? '💖' : '🎈';
+        spawnEmoji({char: kind, size: Math.random()*24+14, left: Math.random()*90+5, duration: Math.random()*6+7, removeAfter: 12000});
+      }, 650);
+    }
+
+    function stopSpawning(){
+      clearInterval(spawnInterval);
+    }
+
+    // small confetti burst once message typed
+    function confettiBurst() {
+      const colors = ['#ff7fbf','#ffd6e8','#ffb6c1','#ff9ac9','#ffd1e6'];
+      const count = 32;
+      for (let i=0;i<count;i++){
+        const piece = document.createElement('div');
+        piece.className = 'confetti-piece';
+        piece.style.left = (50 + (Math.random()*160-80)) + 'vw';
+        piece.style.top = (50 + (Math.random()*30-15)) + 'vh';
+        piece.style.background = colors[Math.floor(Math.random()*colors.length)];
+        piece.style.transform = `translate3d(0,0,0) rotate(${Math.random()*360}deg)`;
+        document.body.appendChild(piece);
+        // animate via JS
+        const animDuration = 1200 + Math.random()*900;
+        const dx = (Math.random()*160-80);
+        const dy = (Math.random()* -300 - 60);
+        piece.animate([
+          { transform: `translateY(0) rotate(0)`, opacity:1 },
+          { transform: `translate(${dx}px, ${dy}px) rotate(360deg)`, opacity:0.1 }
+        ], { duration: animDuration, easing:'cubic-bezier(.2,.6,.2,1)'});
+        setTimeout(()=> piece.remove(), animDuration+100);
+      }
+    }
+
+    // final sparkle
+    function launchFinalEffects(){
+      confettiBurst();
+      // slightly spawn more hearts
+      for(let i=0;i<14;i++){
+        setTimeout(()=> spawnEmoji({char:'💗', size:Math.random()*30+16, left: Math.random()*85+6, duration: Math.random()*5+6}), i*120);
+      }
+      // show replay
+      replayBtn.style.display = 'inline-block';
+    }
+
+    // Start/Replay handlers
+    startBtn.addEventListener('click', async () => {
+      startBtn.disabled = true;
+      // play audio (some browsers require user gesture)
+      try { await audio.play(); } catch(e){ /* ignore */ }
+      // begin spawning & typing
+      startSpawning();
+      await typeLines();
+    });
+
+    replayBtn.addEventListener('click', async () => {
+      // reset
+      stopSpawning();
+      // clear message and start anew
+      messageEl.textContent = '';
+      replayBtn.style.display = 'none';
+      // restart audio from beginning
+      audio.currentTime = 0;
+      try { await audio.play(); } catch(e){}
+      startSpawning();
+      await typeLines();
+    });
+
+    // Accessibility: allow Enter/Space on focused button
+    [startBtn,replayBtn].forEach(btn=>{
+      btn.addEventListener('keyup', (e)=>{
+        if(e.key === 'Enter' || e.key === ' '){
+          btn.click();
+        }
+      });
+    });
+
+    // If user navigates away, stop audio
+    window.addEventListener('blur', ()=> {
+      if (!audio.paused) audio.pause();
+    });
+
+    // Optional: preload a few emojis offscreen to reduce jank (no-op but ok)
+    (function prewarm(){ const d=document.createElement('div'); d.style.opacity=0; d.innerHTML='💖🎈'; document.body.appendChild(d); setTimeout(()=>d.remove(),500); })();
+  </script>
+</body>
+</html>
